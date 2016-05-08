@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+	<title>Tetete Racing 3.0.1</title>
+</head>
+
+<body style="margin: 0px;">
+	<div id="lap" style="background-color: #74c8c8;position:absolute;">
+		<span style="font-size: 50px; color: #fff;">loading...</span>
+	</div>
+	<!--
+	<button>send score</button>
+	<input type="text" id="name">
+	-->
+	<script src="js/TeteteAjax.js"></script>
+	<script src="js/three.js"></script>
+	<script>
+		var sizeX = 100;
+		var sizeY = 100;
+		var camera = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, sizeX * 2);
+		var scene = new THREE.Scene();
+		var renderer = new THREE.WebGLRenderer();
+		var x = 3,
+			z = 3;
+		var vx = 0,
+			vz = 0;
+		var r = Math.PI;
+		var handle = 0;
+		var a = 0;
+		var stagemap = [];
+		var keys = [];
+		var car;
+		var ground;
+		var ground2;
+		var objects = new THREE.Geometry();
+		var objectsmesh;
+		var dirt = new THREE.Geometry();
+		var dirtmesh;
+		var cpmesh;
+		var goalimg = new Image();
+		var goaltex;
+		var goalmesh;
+		var iskey;
+		var texture, image = new Image();
+		var g = 0.1;
+		var start = true;
+		var cp = [{
+			x: 3,
+			y: 50
+		}];
+		var count = 0;
+		var goal = false;
+		var timebox;
+		var time = 0;
+		var stagenum = 0;
+		var mapload = false;
+		var objectload = false;
+		var isdirt = false;
+		var isgoal = false;
+		var imageload = 2;
+		var add = false;
+		var urlData = get_url_vars();
+		var cardata = {
+			acc: 0,
+			grip: 1,
+			handle: 1,
+			dirt: 1
+		};
+		image.onload = function () {
+			imageload--;
+		}
+		goalimg.onload = function () {
+			imageload--;
+		}
+		goalimg.src = "images/tr3-goal.png";
+		if (urlData["car"] == 0) {
+			image.src = 'images/tr3-car.png';
+			cardata.acc = 0.03;
+			cardata.grip = 0.1;
+			cardata.dirt = 1;
+		} else if (urlData["car"] == 1) {
+			image.src = 'images/tr3-car2.png';
+			cardata.acc = 0.02;
+			cardata.grip = 1;
+			cardata.handle = 2;
+			cardata.dirt = 0.5;
+		} else if (urlData["car"] == 2) {
+			image.src = 'images/tr3-car3.png';
+			cardata.acc = 0.01;
+			cardata.grip = 0.1;
+			cardata.dirt = 2;
+		} else if (urlData["car"] == 3) {
+			image.src = 'images/tr3-car4.png';
+			cardata.acc = 0.015;
+			cardata.grip = 1;
+			cardata.dirt = 2;
+			cardata.handle = 1.5;
+		} else if (urlData["car"] == 4) {
+			image.src = 'images/tr3-car5.png';
+			cardata.acc = 0.015;
+			cardata.grip = 0.01;
+			cardata.dirt = 2;
+		} else {
+			image.src = 'images/tr3-car.png';
+			cardata.acc = 0.05;
+			cardata.grip = 0.1;
+		}
+		setmap();
+		timer();
+		document.onkeydown = function (e) {
+			iskey = true;
+			if (e.keyCode == 37) {
+				keys[0] = true;
+			}
+			if (e.keyCode == 39) {
+				keys[1] = true;
+			}
+		}
+		document.onkeyup = function (e) {
+			if (e.keyCode == 38 || e.keyCode == 40) {
+				a = 0;
+			}
+			if (e.keyCode == 37) {
+				keys[0] = false;
+			}
+			if (e.keyCode == 39) {
+				keys[1] = false;
+			}
+		}
+		window.addEventListener('devicemotion', function (event) {
+			var gv = event.accelerationIncludingGravity;
+			handle = gv.x / 200 * cardata.handle;
+		});
+
+		function timer() {
+			if (mapload && imageload == 0 && objectload) {
+				var x1, z1;
+				var h;
+				var sinr;
+				var cosr;
+				var min = Math.floor(time / 1800),
+					sec = Math.floor(time / 30) % 60,
+					msec = (time % 30) * 2;
+				if (min < 10) {
+					min = "0" + min;
+				}
+				if (sec < 10) {
+					sec = "0" + sec;
+				}
+				if (msec < 10) {
+					msec = "0" + msec;
+				}
+				var timestr = min + " . " + sec + " . " + msec;
+				if (iskey) {
+					handle = 0;
+					if (keys[0]) {
+						handle = 0.04 * cardata.handle;
+					} else if (keys[1]) {
+						handle = -0.04 * cardata.handle;
+					}
+				}
+				a = cardata.acc;
+				if (isdirt) {
+					a = cardata.acc * cardata.dirt;
+				}
+				if (goal || !start) {
+					a = 0;
+				}
+				if (goal && !isgoal) {
+					isgoal = true;
+					alert("goal!! time:" + timestr);
+				}
+				if (!goal) {
+					time++;
+				}
+				r += handle;
+				sinr = Math.sin(r);
+				cosr = Math.cos(r);
+				h = (vx * cosr - vz * sinr) * g;
+				vx += a * sinr - h * cosr;
+				vz += a * cosr + h * sinr;
+				vx *= 0.98;
+				vz *= 0.98;
+				x1 = x - vx;
+				z1 = z - vz;
+				timebox.innerHTML = timestr;
+				if (stagemap[Math.round(x1)][Math.round(z1)] != 1) {
+					x = x1;
+					z = z1;
+					g = cardata.grip;
+				} else if (stagemap[Math.round(x1)][Math.round(z1)] == 1) {
+					vx = 0;
+					vz = 0;
+					g = cardata.grip;
+				}
+				if (stagemap[Math.round(x1)][Math.round(z1)] == 2) {
+					vx *= 0.96;
+					vz *= 0.96;
+					g = 0;
+				}
+				if (count == cp.length - 1 && !add) {
+					goalmesh = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 5, 32), new THREE.MeshBasicMaterial({
+						color: 0xff0000,
+						opacity: 0.4,
+						transparent: true,
+						map: goaltex
+					}));
+					scene.add(goalmesh);
+					add = true;
+					goalmesh.position.set(cp[count].x, 1, cp[count].y);
+				}
+				var handle2 = handle / cardata.handle;
+				camera.position.set(x + sinr * 5, 2, z + cosr * 5);
+				car.position.set(x, 1, z);
+				car.rotation.set(0, r + handle2 * 10, 0);
+				camera.lookAt(new THREE.Vector3(car.position.x, car.position.y + 1, car.position.z));
+				cpmesh.position.set(cp[count].x, 1, cp[count].y);
+				renderer.render(scene, camera);
+				if ((x - cp[count].x) * (x - cp[count].x) + (z - cp[count].y) * (z - cp[count].y) <= 16) {
+					console.log(count, cp.length - 1);
+					var c1 = count + 1;
+					if (c1 >= cp.length) {
+						goal = true;
+					} else {
+						count = c1;
+					}
+				}
+			}
+			if (mapload && imageload <= 0 && !objectload) {
+				setobject();
+				setdom();
+			}
+			setTimeout(timer, 33);
+		}
+
+		function setmap() {
+			switch (urlData["course"]) {
+			case "0":
+				doget(null, "TeteteRacing3-course/course0.js", function (res) {
+					eval(res);
+					mapload = true;
+				});
+				break;
+			case "1":
+				doget(null, "TeteteRacing3-course/course1.js", function (res) {
+					eval(res);
+					mapload = true;
+				});
+				break;
+			case "2":
+				doget(null, "TeteteRacing3-course/course2.js", function (res) {
+					eval(res);
+					mapload = true;
+				});
+				break;
+			case "3":
+				doget(null, "TeteteRacing3-course/course3.js", function (res) {
+					eval(res);
+					mapload = true;
+				});
+				break;
+			case "4":
+				doget(null, "TeteteRacing3-course/course4.js", function (res) {
+					eval(res);
+					mapload = true;
+				});
+				break;
+			case "5":
+				doget(null, "TeteteRacing3-course/course5.js", function (res) {
+					eval(res);
+					mapload = true;
+				});
+				break;
+			case "6":
+				doget(null, "TeteteRacing3-course/course6.js", function (res) {
+					eval(res);
+					mapload = true;
+				});
+				break;
+			case "c0":
+				doget(null, "TeteteRacing3-course/classic0.js", function (res) {
+					eval(res);
+					mapload = true;
+				});
+				break;
+			default:
+				console.log("a");
+				for (var i = 0; i < sizeX; i++) {
+					stagemap[i] = [];
+					for (var j = 0; j < sizeY; j++) {
+						stagemap[i][j] = 0;
+						if (i <= 1 || j <= 1 || i >= sizeX - 2 || j >= sizeY - 2) {
+							stagemap[i][j] = 1;
+						}
+					}
+				}
+				console.log(stagemap);
+				mapload = true;
+				break;
+			}
+		}
+
+		function setobject() {
+			ground2 = new THREE.Mesh(new THREE.CubeGeometry(sizeX * 5, 1.25, sizeY * 5),
+				new THREE.MeshBasicMaterial({
+					color: 0x008800
+				}));
+			ground = new THREE.Mesh(new THREE.CubeGeometry(sizeX + 2, 1.25, sizeY + 2),
+				new THREE.MeshBasicMaterial({
+					color: 0x888888
+				}));
+			ground.position.set(sizeX / 2, 0, sizeY / 2);
+			ground2.position.set(sizeX, -1, sizeY);
+			for (var i = 0; i < sizeX; i++) {
+				for (var j = 0; j < sizeY; j++) {
+					var mesh;
+					switch (stagemap[i][j]) {
+					case 2:
+						mesh = new THREE.Mesh(
+							new THREE.PlaneGeometry(1, 1)
+						);
+						mesh.rotation.set(-Math.PI / 2, 0, 0);
+						mesh.position.set(i, 0.69, j);
+						THREE.GeometryUtils.merge(dirt, mesh);
+						break;
+					case 1:
+						mesh = new THREE.Mesh(
+							new THREE.PlaneGeometry(0.5, 0.5)
+						);
+						mesh.position.set(i, 0.9, j);
+						THREE.GeometryUtils.merge(objects, mesh);
+						for (var k = 0; k < 3; k++) {
+							mesh.rotateY(Math.PI / 2);
+							THREE.GeometryUtils.merge(objects, mesh);
+						}
+						mesh = new THREE.Mesh(
+							new THREE.PlaneGeometry(1, 1)
+						);
+						mesh.rotation.set(-Math.PI / 2, 0, 0);
+						mesh.position.set(i, 0.69, j);
+						THREE.GeometryUtils.merge(dirt, mesh);
+						break;
+					}
+				}
+			}
+			objectsmesh = new THREE.Mesh(objects, new THREE.MeshBasicMaterial({
+				map: THREE.ImageUtils.loadTexture('images/tr3-oildram.png')
+			}));
+			dirtmesh = new THREE.Mesh(dirt, new THREE.MeshBasicMaterial({
+				color: 0x008800
+			}));
+			cpmesh = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 5, 32), new THREE.MeshBasicMaterial({
+				color: 0xffff00,
+				opacity: 0.4,
+				transparent: true
+			}));
+			texture = new THREE.Texture(image);
+			texture.needsUpdate = true;
+			car = new THREE.Mesh(
+				new THREE.PlaneGeometry(1, 0.6),
+				new THREE.MeshBasicMaterial({
+					map: texture,
+					transparent: true
+				})
+			);
+			goaltex = new THREE.Texture(goalimg);
+			goaltex.needsUpdate = true;
+			scene.add(car);
+			scene.add(objectsmesh);
+			scene.add(ground);
+			scene.add(dirtmesh);
+			scene.add(ground2);
+			scene.add(cpmesh);
+			camera.position.set(x, 2, z);
+			objectload = true;
+		}
+
+		function setdom() {
+			document.getElementById("lap").innerHTML = "<div id='time' style='background-color:#0088ff;color:#fff'></div>";
+			document.getElementById("lap").style.backgroundColor = "#fff";
+			timebox = document.getElementById("time");
+			setrenderer();
+		}
+
+		function setrenderer() {
+			//renderer
+			var inw = window.innerWidth,
+				inh = window.innerHeight;
+			if (inw > inh) {
+				renderer.setSize(inh, inh / 16 * 9);
+			} else {
+				renderer.setSize(inw, inw / 16 * 9);
+			}
+			renderer.setClearColor(0x0088ff);
+			document.getElementById("lap").appendChild(renderer.domElement);
+		}
+
+		function get_url_vars() {
+			var vars = new Object,
+				params;
+			var temp_params = window.location.search.substring(1).split('&');
+			for (var i = 0; i < temp_params.length; i++) {
+				params = temp_params[i].split('=');
+				vars[params[0]] = params[1];
+			}
+			return vars;
+		}
+	</script>
+</body>
+
+</html>

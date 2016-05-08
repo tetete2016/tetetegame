@@ -1,0 +1,165 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>circle ball</title>
+    <meta name="viewport" content="width=840" />
+</head>
+<body>
+    <script>
+        var canvas = document.createElement("canvas");
+        var ctx = canvas.getContext("2d");
+        var x = 0, y = 120;
+        var ax = 0, ay = -1;
+        var pos = 0;
+        var gameover = false;
+        var score = 0;
+        var timer = setInterval(timer_function, 20);
+        var start = false;
+        canvas.width = 400;
+        canvas.height = 400;
+        canvas.style.cursor = "none";
+        canvas.ontouchstart = ontouch;
+        canvas.ontouchmove = ontouch;
+        document.onmousemove = onmouse;
+        document.onmousedown = onclick;
+        document.addEventListener("touchstart", touchHandler, false);
+        document.addEventListener("touchmove", touchHandler, false);
+        document.addEventListener("touchend", touchHandler, false);
+        document.addEventListener("touchcancel", touchHandler, false);
+        document.body.appendChild(canvas);
+        function timer_function() {
+            draw();
+            move();
+        }
+        function elipce(x, y, r, fill) {
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            if (fill) ctx.fill();
+            if (!fill) ctx.stroke();
+        }
+        function line(x1, y1, x2, y2) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+        function draw() {
+            ctx.fillStyle = "rgb(0,0,0)";
+            ctx.strokeStyle = "rgb(255,255,255)";
+            ctx.fillRect(0, 0, 400, 400);
+            elipce(200, 200, 200, false);
+            line(
+                Math.cos((pos - 10) / 250 * Math.PI) * 150 + 200,
+                Math.sin((pos - 10) / 250 * Math.PI) * 150 + 200,
+                Math.cos((pos + 10) / 250 * Math.PI) * 150 + 200,
+                Math.sin((pos + 10) / 250 * Math.PI) * 150 + 200
+                );
+            elipce(200, 200, 50, false);
+            ctx.fillStyle = "rgb(255,255,255)";
+            elipce(
+                Math.cos(x / 250 * Math.PI) * y + 200,
+                Math.sin(x / 250 * Math.PI) * y + 200,
+                5
+            );
+            ctx.fill();
+            ctx.font = "20px '@�l�r �S�V�b�N'";
+            ctx.textAlign = "center";
+            if (start) {
+                ctx.fillText(score, 200, 180);
+            } else {
+                ctx.fillText("tap/click to start", 200, 190);
+            }
+            if (gameover) {
+                ctx.fillText("gameover", 200, 200);
+                ctx.font = "10px '@�l�r �S�V�b�N'";
+                ctx.fillText("tap here/click to", 200, 215);
+                ctx.fillText("restart", 200, 230);
+            }
+        }
+        function move() {
+            if (start) {
+                var x1 = x + ax;
+                var y1 = y + ay;
+                var x1pos = x1 - pos;
+                if (y1 >= 200) gameover = true;
+                if (x1pos > 250) x1pos -= 500;
+                if (x1pos < -250) x1pos += 500;
+                if (x1 > 250) x1 -= 500;
+                if (x1 < -250) x1 += 500;
+                if (50 < y1 && y1 < 150) {
+                    x = x1;
+                    y = y1;
+                    return;
+                }
+                if (y1 <= 50) {
+                    k = (50 - y) / ay;
+                    x = x + ax * k;
+                    y = 50;
+                    ay = -ay;
+                    x = x + ax * (1 - k);
+                    y = y + ay * (1 - k);
+                    score++;
+                }
+                else if (-15 < x1pos && x1pos < 15 && 50 < y && y < 150) {
+                    k = (150 - y) / ay;
+                    x = x + ax * k;
+                    //y = y + ay * k;
+                    y = 150;
+                    ay = -ay;
+                    ax = x1pos / 8;
+                    if (Math.floor(ax * 10) == 0) ax = Math.random() - 0.5;
+                    x = x + ax * (1 - k);
+                    y = y + ay * (1 - k);
+                }
+                else if (y1 < 200) {
+                    x = x1;
+                    y = y1;
+                    return;
+                }
+            }
+        }
+        function onmouse(e) {
+            e = window.event;
+            pos = Math.floor(Math.atan2(e.clientY - 200, e.clientX - 200) / Math.PI * 250);
+            if (pos > 500) pos -= 500;
+            if (pos < 0) pos += 500;
+            console.log(pos);
+        }
+        function onclick() {
+            if (gameover) {
+                gameover = false;
+                score = 0;
+                x = 0;
+                y = 120;
+                ax = 0.5;
+                ay = -1;
+            }
+            if (!start) {
+                start = true;
+            }
+        }
+        function ontouch() {
+            e = event.touches[0];
+            pos = Math.floor(Math.atan2(e.clientY - 200, e.clientX - 200) / Math.PI * 250);
+            if (pos > 500) pos -= 500;
+            if (pos < 0) pos += 500;
+            if (gameover &&
+                Math.sqrt(Math.pow(e.clientX - 200, 2) + Math.pow(e.clientY - 200, 2)) < 50) {
+                gameover = false;
+                score = 0;
+                x = 0;
+                y = 120;
+                ax = 0.5;
+                ay = -1;
+            }
+            if (!start) {
+                start = true;
+            }
+            console.log(pos);
+        }
+        function touchHandler(event) {
+            event.preventDefault();
+        }
+    </script>
+</body>
+</html>
