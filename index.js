@@ -4,7 +4,7 @@ var app = express();
 app.set('port', (process.env.PORT || 5000));
 
 //app.use(express.static(__dirname + '/public'));
-app.use(express.static('CircleBall'));
+app.use(express.static('public'));
 
 // views is directory for all template files
 //app.set('views', __dirname + '/views');
